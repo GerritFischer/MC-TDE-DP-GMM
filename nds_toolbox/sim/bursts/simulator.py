@@ -12,8 +12,8 @@ import numpy as np
 from scipy.signal import sawtooth
 from scipy.signal.windows import tukey
 from neurodsp.filt import filter_signal
-
-
+from math import ceil 
+import matplotlib.pyplot as plt
 
 
 
@@ -228,7 +228,6 @@ def _simulate_bursts(
 
             total_samples = samples_per_cycle * num_cycles
             aligned_time = np.arange(total_samples) / fs
-
             burst_amplitude = np.abs(rng.normal(loc=1.0, scale=burst_amp_sigma))
 
             if (not use_scalar_freq) and power_law_scale:
@@ -246,7 +245,7 @@ def _simulate_bursts(
 
             end_idx = min(start_idx + total_samples, len(time_vec))
             burst_signal = burst_signal[: end_idx - start_idx]
-
+            
             signal[start_idx:end_idx] = burst_signal
             states[start_idx:end_idx] = current_state
 
@@ -409,4 +408,274 @@ def simulate_bursty_signal(
     return {"signal": signal,
             "states": states,
             "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
             "noise": noise,}
+
+
+def simulate_empty_signal(time_vec):
+    signal = np.zeros(len(time_vec), dtype=float)
+    states = np.zeros(len(time_vec), dtype=int)
+    bursts = np.zeros(len(time_vec), dtype=float)
+    noise = np.zeros(len(time_vec), dtype=float)
+    
+    return {"signal": signal,
+            "states": states,
+            "bursts": bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+def simulate_noise(time_vec, fs, beta=1, rng=None):
+    noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
+    signal = np.copy(noise)
+    states = np.zeros(len(time_vec), dtype=int)
+    bursts = np.zeros(len(time_vec), dtype=float)
+
+    return {"signal": signal,
+            "states": states,
+            "bursts": bursts,
+            "noise": noise,}
+
+
+def shift_right_overwrite(arr, s, n, x):
+    """
+    Shift n elements of list `arr` starting at index s to the right by x positions in-place.
+    Overwrites destination positions. Vacated positions inside the affected window are filled with 0.
+    If x <= 0 or n <= 0 does nothing. If x >= n, the n positions starting at s become 0.
+    Indices are 0-based. Values that move past the end of arr are dropped.
+    """
+    length = len(arr)
+    s = int(s)
+    n = int(n)
+    x = int(x)
+    if n <= 0 or x <= 0 or s >= length:
+        return
+
+    # clamp start and n to valid window inside array
+    if s < 0:
+        # if start is negative, adjust n and start to operate inside array
+        n += s  # reduce n by the negative offset
+        s = 0
+    n = max(0, min(n, length - s))
+
+    if n == 0:
+        return
+
+    if x >= n:
+        # whole window becomes zeros
+        for i in range(s, s + n):
+            arr[i] = 0
+        return
+
+    # move from right to left to avoid overwriting source values
+    for i in range(s + n - 1, s - 1, -1):
+        dest = i + x
+        if dest < length:
+            arr[dest] = arr[i]
+        # else: moved out of bounds -> dropped
+
+    # fill vacated positions within the window [s, s+x-1] with 0
+    for i in range(s, min(s + x, length)):
+        arr[i] = 0
+
+def simulate_independent_signal(
+        time_vec,
+        fs,
+        freq,
+        burst_cycles_param,
+        noise_duration_param,
+        prev_states,
+        state_transition = 'uniform',
+        transition_matrix = None,
+        burst_type="sine",
+        use_filter = True,
+        highpass_f = 0.5,
+        snr_db=0,
+        burst_amp_sigma=0.1,
+        beta=1,
+        chi=0.15,
+        use_tukey=True,
+        tukey_alpha=0.25,
+        rng=None
+        ):
+    """
+    Simulate a bursty signal with added noise.
+
+    """
+
+    if rng is None:
+        rng = np.random.default_rng()
+
+    bursts, states = _simulate_bursts(
+        time_vec, fs, freq,
+        burst_cycles_param, noise_duration_param,state_transition = state_transition, transition_matrix=transition_matrix,
+        burst_type=burst_type, burst_amp_sigma=burst_amp_sigma, chi=chi,
+        use_tukey=use_tukey, tukey_alpha=tukey_alpha, rng=rng
+    )
+    
+
+    made_change = True
+    overlap_start = 0
+    overlap_end = 0
+    overlap_found = False
+    
+    while made_change:
+        made_change = False
+        for p in prev_states:
+            for index, (s1, s2) in enumerate(zip(p, states)):
+                if (s1 == s2) and (s1 != 0):
+                    if not overlap_found:
+                        overlap_start = index
+                        overlap_found = True
+                else:
+                    if overlap_found:
+                        local_index = index
+                        cur_s = 1
+                        while cur_s != 0:
+                            if local_index < len(states):
+                                cur_s = states[local_index]
+                            else:
+                                break
+                            local_index += 1
+                        shift_right_overwrite(states, overlap_start, index-overlap_start, local_index-overlap_start)
+                        shift_right_overwrite(bursts, overlap_start, index-overlap_start, local_index-overlap_start)
+                        overlap_found = False
+                        made_change = True
+                        print("did a shift")
+                    
+
+
+    # Generate colored noise
+    noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
+
+    # scale noise based on the desired SNR
+    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
+
+
+    return {"signal": signal,
+            "states": states,
+            "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+def phase_shift(signal_dict, degree, snr_db, fs, freq, use_filter=True, highpass_f=0.5):
+    states = signal_dict["states"]
+    bursts = signal_dict["unscaled_bursts"]
+    noise = signal_dict["noise"]
+
+
+    onset_start = 0
+    onset_found = False
+    for index, state in enumerate(states):
+        if state != 0:
+            if not onset_found:
+                onset_start = index
+                onset_found = True
+        else:
+            if onset_found:
+                burst = np.copy(bursts[onset_start:index-1])
+                roll_value = (degree % 360) * 1 // (360 // (fs / freq[state-1]))
+                burst = np.roll(burst, roll_value)
+                 
+
+                bursts[onset_start:index-1] = np.copy(burst)
+                print("phase shifted signal by " + str(roll_value))
+
+                onset_found = False
+    
+
+
+    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
+
+
+    return {"signal": signal,
+            "states": states,
+            "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+
+
+
+def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
+    states = np.copy(signal_dict["states"])
+    bursts = np.copy(signal_dict["unscaled_bursts"])
+    noise = np.copy(signal_dict["noise"])
+
+    
+    onset_start = 0
+    onset_found = False
+    for index, state in enumerate(states):
+        if state != 0:
+            if not onset_found:
+                onset_start = index
+                onset_found = True
+        else:
+            if onset_found:
+                 
+
+                burst = np.copy(bursts[onset_start:index-1])
+                aligned_time = np.arange(index-1-onset_start) / fs
+                burst_amplitude = np.abs(rng.normal(loc=1.0, scale=burst_amp_sigma))
+    
+
+
+                if (1) and power_law_scale:
+                    burst_amplitude *= 1.0 / (freq[states[index-1]-1] ** chi)
+               
+                burst = burst_amplitude * np.sin(2 * np.pi * freq[states[index-1]-1] * aligned_time)
+                bursts[onset_start:index-1] = np.copy(burst)
+
+                onset_found = False
+
+    
+
+    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
+
+
+    return {"signal": signal,
+            "states": states,
+            "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+def copy_signal_change_noise(signal_dict, snr_db, fs, rng, time_vec, use_filter=True, highpass_f=0.5, beta=1):
+    states = np.copy(signal_dict["states"])
+    bursts = np.copy(signal_dict["unscaled_bursts"])
+
+    noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
+
+    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
+    
+    return {"signal": signal,
+            "states": states,
+            "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+def delay_bursts(signal_dict, snr_db, delay, fs, use_filter=True, highpass_f=0.5):
+    
+    states = np.copy(signal_dict["states"])
+    bursts = np.copy(signal_dict["unscaled_bursts"])
+    noise = np.copy(signal_dict["noise"])
+    
+    offset = ceil(delay * (fs / 1000))
+
+    states = np.roll(states, offset)
+    bursts = np.roll(bursts, offset)
+    
+    print(f"shifted by {offset}")
+    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
+
+    return {"signal": signal,
+            "states": states,
+            "bursts": scaled_bursts,
+            "unscaled_bursts": bursts,
+            "noise": noise,}
+
+
+
