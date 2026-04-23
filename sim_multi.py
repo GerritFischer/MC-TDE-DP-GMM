@@ -26,7 +26,7 @@ os.makedirs(data_dir, exist_ok = True)
 #global settings (used across all the simulations)
 
 # Set seeds for reproducibility.
-seed = 2024
+seed = 2025
 rng = np.random.default_rng(seed)
 
 
@@ -55,6 +55,7 @@ burst_cycles = [3, 7]
 
 # For noise segments, specify duration in seconds.
 noise_duration = [0.5, 3.]
+
 
 
 ##### Settings per channel ######
@@ -98,6 +99,7 @@ fs_range = [100, 200]
 
 
 ###################################################################
+scale_amps = True
 
 
 states_samples = np.empty((n_samples, len(fs_range), len(fs_range), len(signal_positions)), dtype=object)
@@ -106,7 +108,6 @@ noise_samples  = np.empty_like(states_samples)
 signal_samples = np.empty_like(states_samples)
 unscaled_bursts_samples = np.empty_like(states_samples)
 
-print(np.shape(states_samples))
 
 for sample_id in range(n_samples):
     for cond1_id, freq in enumerate(freq_ranges):
@@ -139,7 +140,7 @@ for sample_id in range(n_samples):
                                    "bursts": np.copy(bursts_samples[sample_id, cond1_id, cond2_id, 0]),
                                    "unscaled_bursts": np.copy(unscaled_bursts_samples[sample_id, cond1_id, cond2_id, 0]),
                                    "noise": np.copy(noise_samples[sample_id, cond1_id, cond2_id, 0]),}
-                    signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng)
+                    signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng, scale_amps=scale_amps)
 
                 elif gtype == 6: ##copy bursts with new noise
                     signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, 0]),
@@ -240,7 +241,7 @@ axes[0,0].set_title('Original Signal')
 axes[0,0].plot(unscaled_bursts_samples[0,0,0,0])
 
 
-axes[0,1].set_title('Independent Onsets')
+axes[0,1].set_title('Independent Onset')
 axes[0,1].plot(unscaled_bursts_samples[0,0,0,0])
 axes[0,1].plot(unscaled_bursts_samples[0,0,0,1])
 

@@ -599,7 +599,7 @@ def phase_shift(signal_dict, degree, snr_db, fs, freq, use_filter=True, highpass
 
 
 
-def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
+def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, scale_amps=True, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
     states = np.copy(signal_dict["states"])
     bursts = np.copy(signal_dict["unscaled_bursts"])
     noise = np.copy(signal_dict["noise"])
@@ -615,17 +615,31 @@ def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, use_filter
         else:
             if onset_found:
                  
+                
 
+                use_scalar_freq = len(freq) == 1
                 burst = np.copy(bursts[onset_start:index-1])
                 aligned_time = np.arange(index-1-onset_start) / fs
                 burst_amplitude = np.abs(rng.normal(loc=1.0, scale=burst_amp_sigma))
     
 
 
-                if (1) and power_law_scale:
+                if (not use_scalar_freq) and power_law_scale:
                     burst_amplitude *= 1.0 / (freq[states[index-1]-1] ** chi)
                
                 burst = burst_amplitude * np.sin(2 * np.pi * freq[states[index-1]-1] * aligned_time)
+                
+                #adding amplitude variations
+
+                cuts = np.sort(np.random.choice(np.arange(1, len(burst)), size=2, replace=False))
+                amps = np.empty(len(burst), dtype=float)
+
+                amps[:cuts[0]] = rng.uniform(0.7, 1.3)
+                amps[cuts[0]:cuts[1]] = rng.uniform(0.7, 1.3)
+                amps[cuts[1]:] = rng.uniform(0.7,1.3)
+
+                if scale_amps: burst = burst * amps
+
                 bursts[onset_start:index-1] = np.copy(burst)
 
                 onset_found = False
