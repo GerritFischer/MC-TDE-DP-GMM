@@ -41,9 +41,9 @@ enable_channel_effect = 0
 
 
 # Simulation parameters.
-n_samples = 2
+n_samples = 10
 
-n_seconds = 10 # Total duration in seconds.
+n_seconds = 60 # Total duration in seconds.
 
 burst_amp_sigma = 0.1
 beta = 1 #pink noise
@@ -71,7 +71,7 @@ signal_positions = [
         ]
 
 
-generation_type = [0, 3, 6, 6, 5, 6]  
+generation_type = [0, 2, 6, 6, 5, 6]  
                            #### new signals ####
                            #0 = new signal from scratch
                            #1 = empty signal
@@ -89,17 +89,17 @@ delays = [0, 0, 0, 0, 0, 100] # delay in ms
 
 # Condition 1: Frequency range (Hz)
 freq_ranges = [
-                [[10], [10], [10], [10], [20], [10]],  #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
-                [[10], [30], [30], [20], [50], [100]],
-              ]
+                [[10], [20], [20], [20], [20], [20,]],  #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
+                [[10], [30], [20], [20], [20], [120,]]
+]
 
 # Condition 2: Sampling frequency [fs]
 
-fs_range = [100, 200]
+fs_range = [200,200]
 
 
 ###################################################################
-scale_amps = True
+scale_amps = False
 
 
 states_samples = np.empty((n_samples, len(fs_range), len(fs_range), len(signal_positions)), dtype=object)
@@ -140,7 +140,7 @@ for sample_id in range(n_samples):
                                    "bursts": np.copy(bursts_samples[sample_id, cond1_id, cond2_id, 0]),
                                    "unscaled_bursts": np.copy(unscaled_bursts_samples[sample_id, cond1_id, cond2_id, 0]),
                                    "noise": np.copy(noise_samples[sample_id, cond1_id, cond2_id, 0]),}
-                    signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng, scale_amps=scale_amps)
+                    signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng, time_vec, scale_amps=scale_amps)
 
                 elif gtype == 6: ##copy bursts with new noise
                     signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, 0]),
@@ -256,8 +256,8 @@ axes[1,1].plot(unscaled_bursts_samples[0,0,0,3])
 
 
 axes[2,0].set_title('Simultaneous Onset, Different Frequency')
-axes[2,0].plot(unscaled_bursts_samples[0,0,0,0])
-axes[2,0].plot(unscaled_bursts_samples[0,0,0,4])
+axes[2,0].plot(signal_samples[0,0,0,0])
+axes[2,0].plot(signal_samples[0,0,0,4])
 
 axes[2,1].set_title('\"Near Simultaneous\" Onset, 100ms Delay')
 axes[2,1].plot(unscaled_bursts_samples[0,0,0,0])

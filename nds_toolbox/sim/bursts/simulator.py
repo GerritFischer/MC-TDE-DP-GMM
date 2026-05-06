@@ -434,6 +434,7 @@ def simulate_noise(time_vec, fs, beta=1, rng=None):
     return {"signal": signal,
             "states": states,
             "bursts": bursts,
+            "unscaled_bursts": bursts,
             "noise": noise,}
 
 
@@ -599,7 +600,7 @@ def phase_shift(signal_dict, degree, snr_db, fs, freq, use_filter=True, highpass
 
 
 
-def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, scale_amps=True, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
+def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, time_vec, beta=1, scale_amps=True, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
     states = np.copy(signal_dict["states"])
     bursts = np.copy(signal_dict["unscaled_bursts"])
     noise = np.copy(signal_dict["noise"])
@@ -644,7 +645,7 @@ def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, scale_amps
 
                 onset_found = False
 
-    
+    noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
 
     signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
 

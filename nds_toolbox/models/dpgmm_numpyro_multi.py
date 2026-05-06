@@ -28,10 +28,7 @@ def stick_breaking(v):
 
 def dpgmm_model(data, *, num_states, batch_size=None, alpha_prior=1.0, learn_alpha=True, learn_mean=True):
     num_data, num_dim = data.shape
-    stacked_dim = num_dim
-    print("STACKED DIMS!")
-    print(stacked_dim)
-    print(data.shape)
+
     if learn_alpha:
         # hyper prior
         #alpha = numpyro.sample("alpha", dist.HalfCauchy(0.5))
@@ -58,30 +55,27 @@ def dpgmm_model(data, *, num_states, batch_size=None, alpha_prior=1.0, learn_alp
         with numpyro.plate("components", num_states):
             mean = numpyro.sample(
                 "mean",
-                dist.MultivariateNormal(jnp.zeros(stacked_dim),
-                                        jnp.eye(stacked_dim))
+                dist.MultivariateNormal(jnp.zeros(num_dim),
+                                        jnp.eye(num_dim))
             )
             sigma = numpyro.sample("sigma",
-                                   dist.HalfCauchy(jnp.ones(stacked_dim)).to_event(
+                                   dist.HalfCauchy(jnp.ones(num_dim)).to_event(
                                        1))  # maybe gamma is better? (gamma(1, 10))
-            
-            
-            #sigma = numpyro.sample("sigma", dist.Gamma(1, 10))
 
             chol_corr = numpyro.sample("chol_corr",
-                                       dist.LKJCholesky(stacked_dim, concentration=1.0))
+                                       dist.LKJCholesky(num_dim, concentration=1.0))
 
             L_cov = chol_corr * sigma[..., None]
 
     else:
         # fixed zero mean for each component
-        mean = numpyro.deterministic("mean", jnp.zeros((num_states, stacked_dim)))
+        mean = numpyro.deterministic("mean", jnp.zeros((num_states, num_dim)))
         with numpyro.plate("components", num_states):
             sigma = numpyro.sample("sigma",
-                                   dist.HalfCauchy(jnp.ones(stacked_dim)).to_event(1))
+                                   dist.HalfCauchy(jnp.ones(num_dim)).to_event(1))
 
             chol_corr = numpyro.sample("chol_corr",
-                                       dist.LKJCholesky(stacked_dim, concentration=1.0))
+                                       dist.LKJCholesky(num_dim, concentration=1.0))
             L_cov = numpyro.deterministic("L_cov", chol_corr * sigma[..., None])
 
     if batch_size is None:
@@ -89,16 +83,10 @@ def dpgmm_model(data, *, num_states, batch_size=None, alpha_prior=1.0, learn_alp
 
     # mixture assignment + likelihood
     with numpyro.plate("data", num_data, subsample_size=batch_size) as ind:
-        sig1 = data[ind]         # (batch_size, D)
-        #sig2 = data[1, ind]         # (batch_size, D)
-        #z = jnp.concatenate([sig1, sig2], axis=-1)  # (batch_size, 2*D)
-
-        mixture_dist = dist.MixtureSameFamily(
-            dist.Categorical(logits=jnp.log(weights)),
-            dist.MultivariateNormal(loc=mean, scale_tril=L_cov)
-        )
-
-        numpyro.sample("obs", mixture_dist, obs=sig1)
+        batch_data = data[ind]
+        mixture_dist = dist.MixtureSameFamily(dist.Categorical(logits=jnp.log(weights)),
+                                              dist.MultivariateNormal(mean, scale_tril=L_cov))
+        numpyro.sample("obs", mixture_dist, obs=batch_data)
 
 
 from numpyro.infer import SVI, TraceEnum_ELBO, Trace_ELBO, init_to_value
@@ -123,7 +111,6 @@ def _fit_DPGMM(x,
                use_epoch_tqdm=False
                ):
     x = jnp.array(x)
-    print(x.shape)
     guide = AutoNormal(dpgmm_model, init_loc_fn=init_to_feasible)
 
     # For numerical stability, normalize the scale by the total number of data points.
@@ -417,6 +404,7 @@ def truncate(means, covs, weights, mass_threshold=0.99,
     if return_info:
         return trunc_means, trunc_covs, trunc_weights, info
     return trunc_means, trunc_covs, trunc_weights
+
 
 
 
