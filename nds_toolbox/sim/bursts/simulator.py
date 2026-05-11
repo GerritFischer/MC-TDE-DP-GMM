@@ -518,31 +518,65 @@ def simulate_independent_signal(
     made_change = True
     overlap_start = 0
     overlap_end = 0
+    s1_end = 0
+    s2_end = 0
     overlap_found = False
-    
+    s1_end_found = False
+    s2_end_found = False
+    run = 1
+    performed_shifts = 0
+
     while made_change:
+        overlap_found = False
+        made_change = True
+        s1_end_found = False
+        s2_end_found = False        #print("RUN " + str(run))
+        run += 1
+        if(run > 100): break
         made_change = False
         for p in prev_states:
+            if made_change: break
             for index, (s1, s2) in enumerate(zip(p, states)):
-                if (s1 == s2) and (s1 != 0):
-                    if not overlap_found:
-                        overlap_start = index
-                        overlap_found = True
-                else:
-                    if overlap_found:
-                        local_index = index
-                        cur_s = 1
-                        while cur_s != 0:
-                            if local_index < len(states):
-                                cur_s = states[local_index]
-                            else:
-                                break
-                            local_index += 1
-                        shift_right_overwrite(states, overlap_start, index-overlap_start, local_index-overlap_start)
-                        shift_right_overwrite(bursts, overlap_start, index-overlap_start, local_index-overlap_start)
+                if made_change: break
+                ##### OVERLAP FOUND
+                if overlap_found:
+                    if (s1 == 0) and (s2 != 0) and (not s1_end_found):
+                        #print(s1_end_found)
+                        s1_end = index
+                        s1_end_found = True
+                    elif (s1 != 0) and (s2 == 0) and (not s2_end_found):
+                        s2_end = index
+                        s2_end_found = True
+                    elif index == len(states) - 1:
+                        shift_right_overwrite(states, overlap_start, index-overlap_start+1, index-overlap_start+1)
+                        shift_right_overwrite(bursts, overlap_start, index-overlap_start+1, index-overlap_start+1)
+                    elif (s1 == 0) and (s2 == 0):
+                        if not s1_end_found:    
+                            s1_end = index
+                        if not s2_end_found:
+                            s2_end = index
+
                         overlap_found = False
                         made_change = True
-                        print("did a shift")
+                        s1_end_found = False
+                        s2_end_found = False
+
+                        #print(s1_end)
+                        #print(s2_end)
+                        shift_right_overwrite(states, overlap_start, s2_end-overlap_start, s1_end-overlap_start)
+                        shift_right_overwrite(bursts, overlap_start, s2_end-overlap_start, s1_end-overlap_start)
+                        
+
+                        #rint("did a shiftrrrr" + str(performed_shifts))
+                        #performed_shifts += 1
+                else:
+                    #print("GOING")
+                    if (s2 != 0) and (s1 != 0):
+                        overlap_start = index
+                        #print(f"START: {overlap_start}")
+                        overlap_found = True
+
+                        
                     
 
 
@@ -645,7 +679,7 @@ def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, time_vec, 
 
                 onset_found = False
 
-    noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
+    #noise = _generate_colored_noise(len(time_vec), fs, beta, rng=rng)
 
     signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
 

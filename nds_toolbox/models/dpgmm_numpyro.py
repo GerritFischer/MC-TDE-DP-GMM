@@ -29,9 +29,6 @@ def stick_breaking(v):
 def dpgmm_model(data, *, num_states, batch_size=None, alpha_prior=1.0, learn_alpha=True, learn_mean=True):
     num_data, num_dim = data.shape
     stacked_dim = num_dim
-    print("STACKED DIMS!")
-    print(stacked_dim)
-    print(data.shape)
     if learn_alpha:
         # hyper prior
         #alpha = numpyro.sample("alpha", dist.HalfCauchy(0.5))
