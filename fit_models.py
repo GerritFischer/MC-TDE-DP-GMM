@@ -23,21 +23,15 @@ states_sample = sim_data['states_samples']
 bursts_sample = sim_data['bursts_samples']
 print("shape of signal_sample", signal_sample.shape)
 
-freq = np.array([10])
-freq2 = np.array([20])
 seed = 2026
-fs = 200
-time_vec = np.linspace(0, 60, int(fs * 60))
-snr_db = 2
-state_transition = 'return_to_baseline'
-num_emb = 21
-results = np.empty_like(signal_sample)
 
 num_models = 1 #default: 10
 num_epochs = 3000#default: 3000
 n_jobs = 1 #increase the number of jobs when you want to multi process the inference
 lr = 1e-2
+num_emb = 21  
 
+results = np.empty_like(signal_sample)
 
 for s_id, sample in enumerate(signal_sample):
     for cond1_id, cond1 in enumerate(sample):
@@ -59,20 +53,6 @@ for s_id, sample in enumerate(signal_sample):
                     tde_signal2 = compute_tde(sig, num_emb)                   
                     combined_tde = np.concatenate([tde_signal, tde_signal2], axis=1)
 
-
-                    combined_states = np.empty_like(states)
-                        
-                    state_dict = {'00': 0}
-                    state_num = 1
-                    for i, (s1, s2) in enumerate(zip(main_states, states)):
-                        s =  str(s1) + str(s2)
-                        if s not in state_dict:
-                            state_dict[s] = state_num
-                            state_num += 1
-                        combined_states[i] = state_dict[s]
-
-                    trimmed_states = trim_data(combined_states, num_emb, verbose = False)
-                    trimmed_time_vec = np.linspace(0, len(trimmed_states)/fs, len(trimmed_states))
                     num_states = int(np.ceil(np.log(len(trimmed_sig)))) # E[K] = alpha ln n
                     
                     dpgmm_result = fit_DPGMM(data=combined_tde,
