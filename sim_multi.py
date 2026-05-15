@@ -10,49 +10,33 @@ from nds_toolbox.sim.bursts.simulator import (simulate_bursty_signal,
                                              delay_bursts)
 import matplotlib.pyplot as plt
 import math
-#%%
 
-simulation_condition = "test"
-file_name = f"{simulation_condition}_data.npz"
-figure_dir = os.path.join("..", "figures", simulation_condition)
-#figure_dir  = f"../figures/{simulation_condition}"
-#data_dir = "../data/simulations"
-data_dir = os.path.join("..", "data", "simulations")
-data_file = f"../data/simulations/{simulation_condition}_data.npz"
-data_file = os.path.join("..", "data", "simulations", file_name)
+###################
+#### SETTINGS #####
+###################
 
-(os.makedirs
- (figure_dir, exist_ok=True))
-os.makedirs(data_dir, exist_ok = True)
+use_config_file = False  #if true settings will be ignored and config will be loaded
 
-
-#global settings (used across all the simulations)
+simulation_condition = "test2"
 
 # Set seeds for reproducibility.
 seed = 2026
-rng = np.random.default_rng(seed)
+
+##### Channel effect (WIP) #####
+#delay_per_mm = 1000 # 1ms per mm
+#decay_per_mm = 0.1 # the signal decay by 10% per mm
+
+#enable_channel_effect = 0
 
 
-############
-##### Channel effect #####
-delay_per_mm = 1000 # 1ms per mm
-decay_per_mm = 0.1 # the signal decay by 10% per mm
+##### Simulation parameters #####
+n_samples = 1 # amount of samples
 
-enable_channel_effect = 0
-##########################
-
-
-
-# Simulation parameters.
-n_samples = 3
-
-n_seconds = 180 # Total duration in seconds.
+n_seconds = 180 # total duration in seconds.
 
 burst_amp_sigma = 0.1
 beta = 1 #pink noise
 
-snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10]
-#snrs = [0, 2, 10]
 # For burst segments, specify duration as the number of cycles.
 burst_cycles = [3, 7]
 
@@ -60,20 +44,15 @@ burst_cycles = [3, 7]
 noise_duration = [0.5, 3.]
 
 
+# Used for copy onset times with new frequency, specify if amps 
+# should be randomized during a single onset
+randomize_amps = True
 
 ##### Settings per channel ######
 
-# Set positions of each signal
-signal_positions = [
-            [0, 0, 0],
-            [0, 0, 0],
-        ]
-
-
-
 ### the length of this array determines how many channels are created
 ### make sure to have at least that many freqs, if more freqs are present they are ignored
-generation_type = [0, 0, 0, 0, 0, 0, 0]  
+generation_type = [0, 0, 0, 0]
                            #### new signals ####
                            #0 = new signal from scratch
                            #1 = empty signal
@@ -89,27 +68,48 @@ generation_type = [0, 0, 0, 0, 0, 0, 0]
 phase_shift_degree = [0, 0, 0, 0, 0, 0, 0]
 delays = [0, 0, 0, 0, 0, 0, 0] # delay in ms                           
 
+
+##### Conditions #####
+
 # Condition 1: Frequency range (Hz)
 freq_ranges = [
                 [[10], [15], [20], [25], [30], [35], [40]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
 ]
 
 # Condition 2: Sampling frequency [fs]
-
 fs_range = [250]
+
+# Signal to noise ratios
+snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
+snrs = [0]
 
 
 ###################################################################
-scale_amps = False
+
+rng = np.random.default_rng(seed)
 
 
+### generating file paths
+file_name = f"{simulation_condition}_data.npz"
+figure_dir = os.path.join("..", "figures", simulation_condition)
+data_dir = os.path.join("..", "data", "simulations")
+file_path = os.path.join(data_dir, file_name)
+
+(os.makedirs
+ (figure_dir, exist_ok=True))
+os.makedirs(data_dir, exist_ok = True)
+
+
+
+
+# create arrays based on parameters above
 states_samples = np.empty((n_samples, len(fs_range), len(fs_range), len(snrs), len(generation_type)), dtype=object)
 bursts_samples = np.empty_like(states_samples)
 noise_samples  = np.empty_like(states_samples)
 signal_samples = np.empty_like(states_samples)
 unscaled_bursts_samples = np.empty_like(states_samples)
 
-
+### generate channels for each sample, condition and snr
 for sample_id in range(n_samples):
     for cond1_id, freq in enumerate(freq_ranges):
         for cond2_id, fs in enumerate(fs_range):
@@ -137,13 +137,13 @@ for sample_id in range(n_samples):
                                     "bursts": np.copy(bursts_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "unscaled_bursts": np.copy(unscaled_bursts_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "noise": np.copy(noise_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),}
-                    elif gtype == 5: #copy offset times with changed freq
+                    elif gtype == 5: #copy onset times with changed freq
                         signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "states": np.copy(states_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "bursts": np.copy(bursts_samples[sample_id, cond1_id, cond2_id, snr_id,0]),
                                     "unscaled_bursts": np.copy(unscaled_bursts_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "noise": np.copy(noise_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),}
-                        signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng, time_vec, scale_amps=scale_amps)
+                        signal_dict = copy_signal_change_burst_freq(signal_dict, snr, fs, freq[signal_pos_id], rng, time_vec, scale_amps=randomize_amps)
 
                     elif gtype == 6: ##copy bursts with new noise
                         signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
@@ -176,7 +176,7 @@ for sample_id in range(n_samples):
 
 
 
-print("Data shape", signal_samples.shape, "[samples, cond1, cond2, signals]: the data points are stored as object")
+print("Data shape", signal_samples.shape, "[samples, cond1, cond2, snrs, signals]: the data points are stored as object")
 
 
 
@@ -218,28 +218,18 @@ for sample_id,sample in enumerate(signal_samples):
 '''
 
 
-
-
-
-        
-
-
-
-### save the data
-np.savez_compressed(data_file,
+### save data
+np.savez_compressed(file_path,
                     signal_samples=signal_samples,
                     states_samples=states_samples,
                     bursts_samples=bursts_samples,
                     noise_samples=noise_samples)
 
-print(f"Data saved as {data_file}")
-
-
+print(f"Data saved as {file_path}")
 
 
 
 ### DEBUG CODE
-
 """
 fig, axes = plt.subplots(3, 2)
 
@@ -251,8 +241,6 @@ axes[0,0].plot(unscaled_bursts_samples[0,0,0,0,0])
 axes[0,1].set_title('Independent Onset')
 axes[0,1].plot(unscaled_bursts_samples[0,0,0,0,0])
 axes[0,1].plot(unscaled_bursts_samples[0,0,0,0,1])
-
-
 
 print(states_samples[0,0,0,0,0][11999])
 print(states_samples[0,0,0,0,1][11999])
