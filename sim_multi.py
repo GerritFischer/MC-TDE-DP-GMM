@@ -12,11 +12,14 @@ import matplotlib.pyplot as plt
 import math
 #%%
 
-simulation_condition = "independent-40-[10:35]-snr-[-10:10]"
-figure_dir  = f"../figures/{simulation_condition}"
-data_dir = "../data/simulations"
+simulation_condition = "test"
+file_name = f"{simulation_condition}_data.npz"
+figure_dir = os.path.join("..", "figures", simulation_condition)
+#figure_dir  = f"../figures/{simulation_condition}"
+#data_dir = "../data/simulations"
+data_dir = os.path.join("..", "data", "simulations")
 data_file = f"../data/simulations/{simulation_condition}_data.npz"
-
+data_file = os.path.join("..", "data", "simulations", file_name)
 
 (os.makedirs
  (figure_dir, exist_ok=True))
@@ -41,15 +44,15 @@ enable_channel_effect = 0
 
 
 # Simulation parameters.
-n_samples = 1
+n_samples = 3
 
-n_seconds = 60 # Total duration in seconds.
+n_seconds = 180 # Total duration in seconds.
 
 burst_amp_sigma = 0.1
 beta = 1 #pink noise
 
-snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 8, 10]
-snrs = [2]
+snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10]
+#snrs = [0, 2, 10]
 # For burst segments, specify duration as the number of cycles.
 burst_cycles = [3, 7]
 
@@ -70,7 +73,7 @@ signal_positions = [
 
 ### the length of this array determines how many channels are created
 ### make sure to have at least that many freqs, if more freqs are present they are ignored
-generation_type = [0, 3]  
+generation_type = [0, 0, 0, 0, 0, 0, 0]  
                            #### new signals ####
                            #0 = new signal from scratch
                            #1 = empty signal
@@ -88,12 +91,12 @@ delays = [0, 0, 0, 0, 0, 0, 0] # delay in ms
 
 # Condition 1: Frequency range (Hz)
 freq_ranges = [
-                [[10], [10], [15], [20], [25], [30], [35]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
+                [[10], [15], [20], [25], [30], [35], [40]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
 ]
 
 # Condition 2: Sampling frequency [fs]
 
-fs_range = [200]
+fs_range = [250]
 
 
 ###################################################################
@@ -223,7 +226,6 @@ for sample_id,sample in enumerate(signal_samples):
 
 
 ### save the data
-data_file = f"{data_dir}/{simulation_condition}_data.npz"
 np.savez_compressed(data_file,
                     signal_samples=signal_samples,
                     states_samples=states_samples,

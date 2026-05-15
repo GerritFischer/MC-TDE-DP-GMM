@@ -12,9 +12,11 @@ from nds_toolbox.preprocessing.features import (compute_tde,trim_data)
 from nds_toolbox.preprocessing.features import choose_embedding_dim
 from nds_toolbox.utils.helper import compare_decoding_performance
 
-sim_cond = "independent-40-[10:35]-snr-[-10:10]"
-signal_dir = "../data/simulations"
-performance_dir = "../data/performance"
+path = os.path.join("C:", "meshes", "as")
+
+sim_cond = "ind10-(15-40)-snr(-10-10)"
+signal_dir = os.path.join("..", "data", "simulations")
+performance_dir = os.path.join("..", "data", "performance")
 result_dir = "../data/results"
 
 sim_data = np.load(f'{signal_dir}/{sim_cond}_data.npz', allow_pickle=True)
@@ -25,13 +27,14 @@ print("shape of signal_sample", signal_sample.shape)
 
 seed = 2026
 
-num_models = 1 #default: 10
+num_models = 5 #default: 10
 num_epochs = 3000#default: 3000
-n_jobs = 1 #increase the number of jobs when you want to multi process the inference
-lr = 1e-2
-num_emb = 21  
+n_jobs = 10 #increase the number of jobs when you want to multi process the inference
+lr = 0.01
+num_emb = 15  
 
-results = np.empty_like(signal_sample)
+results = np.empty((len(signal_sample), len(signal_sample[0]), len(signal_sample[0,0]), len(signal_sample[0,0,0]), len(signal_sample[0,0,0,0])-1), dtype=object)
+
 
 for s_id, sample in enumerate(signal_sample):
     for cond1_id, cond1 in enumerate(sample):
@@ -58,7 +61,7 @@ for s_id, sample in enumerate(signal_sample):
                     dpgmm_result = fit_DPGMM(data=combined_tde,
                                             num_states=num_states,
                                             use_epoch_tqdm=True,
-                                            n_jobs=10,
+                                            n_jobs=n_jobs,
                                             use_model_tqdm=True,
                                             num_models=num_models,
                                             main_seed=seed,
@@ -66,7 +69,7 @@ for s_id, sample in enumerate(signal_sample):
                                             learning_rate=lr,
                                             verbose=True)
                     
-                    results[s_id, cond1_id, cond2_id, snr_id, sig_id] = np.copy(dpgmm_result)
+                    results[s_id, cond1_id, cond2_id, snr_id, sig_id] = dict(dpgmm_result)
 
 os.makedirs(result_dir, exist_ok = True)                    
 data_file = f"{result_dir}/{sim_cond}_results.npz"
