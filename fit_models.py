@@ -13,7 +13,7 @@ from nds_toolbox.preprocessing.features import choose_embedding_dim
 from nds_toolbox.utils.helper import compare_decoding_performance
 
 
-sim_cond = "test2"
+sim_cond = "test"
 signal_dir = os.path.join("..", "data", "simulations")
 performance_dir = os.path.join("..", "data", "performance")
 result_dir = os.path.join ("..", "data", "results")
@@ -29,12 +29,12 @@ print("shape of signal_sample", signal_sample.shape)
 seed = 2026
 
 num_models = 1 #default: 10
-num_epochs = 300#default: 3000
+num_epochs = 3000#default: 3000
 n_jobs = 10 #increase the number of jobs when you want to multi process the inference
 lr = 0.01
-num_emb = 15  
+num_emb = 21 
 
-total_runs = len(signal_sample) * len(signal_sample[0]) * len(signal_sample[0,0]) * len(signal_sample[0,0,0]) * len(signal_sample[0,0,0,0])-1
+total_runs = len(signal_sample) * len(signal_sample[0]) * len(signal_sample[0,0]) * len(signal_sample[0,0,0]) * (len(signal_sample[0,0,0,0])-1)
 current_run = 1
 
 results = np.empty((len(signal_sample), len(signal_sample[0]), len(signal_sample[0,0]), len(signal_sample[0,0,0]), len(signal_sample[0,0,0,0])-1), dtype=object)

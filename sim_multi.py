@@ -17,7 +17,7 @@ import math
 
 use_config_file = False  #if true settings will be ignored and config will be loaded
 
-simulation_condition = "test2"
+simulation_condition = "test"
 
 # Set seeds for reproducibility.
 seed = 2026
@@ -52,7 +52,7 @@ randomize_amps = True
 
 ### the length of this array determines how many channels are created
 ### make sure to have at least that many freqs, if more freqs are present they are ignored
-generation_type = [0, 0, 0, 0]
+generation_type = [0, 0]
                            #### new signals ####
                            #0 = new signal from scratch
                            #1 = empty signal
@@ -65,26 +65,26 @@ generation_type = [0, 0, 0, 0]
                            #6 = copy bursts
 
 
-phase_shift_degree = [0, 0, 0, 0, 0, 0, 0]
-delays = [0, 0, 0, 0, 0, 0, 0] # delay in ms                           
+phase_shift_degree = [0, 0, 0, 0, 0, 0, 0, 0]
+delays = [0, 0, 0, 0, 0, 0, 0, 0] # delay in ms                           
 
 
 ##### Conditions #####
 
 # Condition 1: Frequency range (Hz)
 freq_ranges = [
-                [[10], [15], [20], [25], [30], [35], [40]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
+                [[20], [5], [10], [15], [25], [30], [35], [40]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
 ]
 
 # Condition 2: Sampling frequency [fs]
 fs_range = [250]
 
 # Signal to noise ratios
-snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
-snrs = [0]
-
-
+#snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
+snrs = [2]
 ###################################################################
+
+
 
 rng = np.random.default_rng(seed)
 
