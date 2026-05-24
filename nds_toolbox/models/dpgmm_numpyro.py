@@ -438,15 +438,8 @@ def truncate(
 
             dim = trunc_covs_stage1.shape[1] // 2
 
-            print(dim)
-
-            
             cov_channel_1 = trunc_covs_stage1[:, 0:dim, 0:dim]
             cov_channel_2 = trunc_covs_stage1[:, dim:(dim*2), dim:(dim*2)]
-
-
-            print(cov_channel_1.shape)
-            print(cov_channel_2.shape)
 
             diag_channel_1 = jnp.diagonal(cov_channel_1, axis1=-2, axis2=-1)
             mu_1 = jnp.mean(diag_channel_1, axis=-1)
