@@ -17,7 +17,7 @@ import math
 
 use_config_file = False  #if true settings will be ignored and config will be loaded
 
-simulation_condition = "test"
+simulation_condition = "emb_test_fs250_same_onset"
 
 # Set seeds for reproducibility.
 seed = 2026
@@ -30,7 +30,7 @@ seed = 2026
 
 
 ##### Simulation parameters #####
-n_samples = 1 # amount of samples
+n_samples = 3 # amount of samples
 
 n_seconds = 180 # total duration in seconds.
 
@@ -52,7 +52,7 @@ randomize_amps = True
 
 ### the length of this array determines how many channels are created
 ### make sure to have at least that many freqs, if more freqs are present they are ignored
-generation_type = [0, 0]
+generation_type = [0, 5, 5, 5, 5, 5]
                            #### new signals ####
                            #0 = new signal from scratch
                            #1 = empty signal
@@ -73,7 +73,7 @@ delays = [0, 0, 0, 0, 0, 0, 0, 0] # delay in ms
 
 # Condition 1: Frequency range (Hz)
 freq_ranges = [
-                [[20], [5], [10], [15], [25], [30], [35], [40]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
+                [[20], [10], [20], [30], [40], [50]] #first freq range with frist signal containing 10hz osc and second signal containing 20hz osc 
 ]
 
 # Condition 2: Sampling frequency [fs]
@@ -81,7 +81,7 @@ fs_range = [250]
 
 # Signal to noise ratios
 #snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
-snrs = [2]
+snrs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ###################################################################
 
 

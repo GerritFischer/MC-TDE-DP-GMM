@@ -13,7 +13,7 @@ from nds_toolbox.preprocessing.features import choose_embedding_dim
 from nds_toolbox.utils.helper import compare_decoding_performance
 
 
-sim_cond = "test"
+sim_cond = "emb_test_fs250_same_onset"
 signal_dir = os.path.join("..", "data", "simulations")
 performance_dir = os.path.join("..", "data", "performance")
 result_dir = os.path.join ("..", "data", "results")
@@ -24,15 +24,24 @@ sim_data = np.load(sim_path, allow_pickle=True)
 signal_sample = sim_data['signal_samples']
 states_sample = sim_data['states_samples']
 bursts_sample = sim_data['bursts_samples']
+
+print(f"fitting models with condition {sim_cond}")
 print("shape of signal_sample", signal_sample.shape)
 
 seed = 2026
 
-num_models = 1 #default: 10
+num_models = 3 #default: 10
 num_epochs = 3000#default: 3000
 n_jobs = 10 #increase the number of jobs when you want to multi process the inference
 lr = 0.01
-num_emb = 21 
+
+num_emb = 21
+
+##if this is true, a different embedding size is used per snr
+num_embs = [3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35] 
+use_different_emb = True
+
+
 
 total_runs = len(signal_sample) * len(signal_sample[0]) * len(signal_sample[0,0]) * len(signal_sample[0,0,0]) * (len(signal_sample[0,0,0,0])-1)
 current_run = 1
@@ -40,10 +49,14 @@ current_run = 1
 results = np.empty((len(signal_sample), len(signal_sample[0]), len(signal_sample[0,0]), len(signal_sample[0,0,0]), len(signal_sample[0,0,0,0])-1), dtype=object)
 
 
+
 for s_id, sample in enumerate(signal_sample):
     for cond1_id, cond1 in enumerate(sample):
         for cond2_id, cond2 in enumerate(cond1):
             for snr_id, snr in enumerate(cond2):
+                if use_different_emb:
+                    num_emb = num_embs[snr_id]
+
                 main_sig = snr[0]
                 main_states = states_sample[s_id, cond1_id, cond2_id, snr_id, 0]
                 
