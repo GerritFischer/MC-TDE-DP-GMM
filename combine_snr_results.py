@@ -1,6 +1,24 @@
 import os
 import numpy as np
 
+
+"""
+This is a script for combining two datasets and results together.
+They have to be split in multiple chunks of SNRs.
+For example you can have two sets like this:
+    (3, 1, 1, 5, 10)
+    (3, 1, 1, 7, 10)
+
+with 3 samples, 1 condition_1, 1 condition_2, 5/7 different snrs and 10 channels.
+They will be combined into a single dataset and result file in the format of:
+    (3, 1, 1, 12, 10)
+
+This script was created to fit the models for larger datasets on different computers.
+"""
+
+
+
+
 con1 = "rnd-5-(10-40)-snr(-10-0)"
 con2 = "rnd-5-(10-40)-snr(2-10)"
 con_fin = "rnd-5-(10-40)-snr(-10-10)"

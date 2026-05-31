@@ -4,10 +4,9 @@ from nds_toolbox.sim.bursts.simulator import (simulate_bursty_signal,
                                              simulate_empty_signal, 
                                              simulate_noise, 
                                              simulate_independent_signal, 
-                                             phase_shift,
                                              copy_signal_change_burst_freq,
-                                             copy_signal_change_noise,
-                                             delay_bursts)
+                                             copy_signal_change_noise)
+from nds_toolbox.sim.bursts.filters import (delay_bursts, phase_shift)
 import matplotlib.pyplot as plt
 import math
 
@@ -17,7 +16,7 @@ import math
 
 use_config_file = False  #if true settings will be ignored and config will be loaded
 
-simulation_condition = "emb_test_fs250_same_onset"
+simulation_condition = "t1"
 
 # Set seeds for reproducibility.
 seed = 2026
@@ -65,8 +64,8 @@ generation_type = [0, 5, 5, 5, 5, 5]
                            #6 = copy bursts
 
 
-phase_shift_degree = [0, 0, 0, 0, 0, 0, 0, 0]
-delays = [0, 0, 0, 0, 0, 0, 0, 0] # delay in ms                           
+phase_shift_degree = [100, 0, 0, 0, 0, 0, 0, 0]
+delays = [0, 100, 0, 0, 0, 0, 0, 0] # delay in ms                           
 
 
 ##### Conditions #####
@@ -80,8 +79,7 @@ freq_ranges = [
 fs_range = [250]
 
 # Signal to noise ratios
-#snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
-snrs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10]
 ###################################################################
 
 
@@ -119,7 +117,6 @@ for sample_id in range(n_samples):
                     time_vec = np.linspace(0, n_seconds, int(fs * n_seconds), endpoint=False)
                     gtype = generation_type[signal_pos_id]
 
-
                     if gtype == 1: #empty channel
                         signal_dict = simulate_empty_signal(time_vec)
                     elif gtype == 2: #noise only
@@ -130,13 +127,14 @@ for sample_id in range(n_samples):
                             burst_type="sine", snr_db=snr, beta=beta,
                             burst_amp_sigma=burst_amp_sigma, rng=rng, prev_states=states_samples[sample_id, cond1_id, cond2_id, snr_id, :1]
                             )                                                                                                       #set to :signal_pos_id to make each channel independent form all
-                                                                                                                                    #set to :1 to make channel 1 to N independent from first
+                                                                                                                    #set to :1 to make channel 1 to N independent from first
                     elif gtype == 4:  #copy complete
                         signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "states": np.copy(states_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "bursts": np.copy(bursts_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "unscaled_bursts": np.copy(unscaled_bursts_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "noise": np.copy(noise_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),}
+
                     elif gtype == 5: #copy onset times with changed freq
                         signal_dict = {"signal": np.copy(signal_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
                                     "states": np.copy(states_samples[sample_id, cond1_id, cond2_id, snr_id, 0]),
@@ -179,8 +177,6 @@ for sample_id in range(n_samples):
 print("Data shape", signal_samples.shape, "[samples, cond1, cond2, snrs, signals]: the data points are stored as object")
 
 
-
-
 ### calculate influence of signals to each other (WIP)
 '''
 final_signal_samples = np.empty_like(signal_samples)
@@ -217,7 +213,6 @@ for sample_id,sample in enumerate(signal_samples):
         
 '''
 
-
 ### save data
 np.savez_compressed(file_path,
                     signal_samples=signal_samples,
@@ -227,12 +222,9 @@ np.savez_compressed(file_path,
 
 print(f"Data saved as {file_path}")
 
-
-
 ### DEBUG CODE
 """
 fig, axes = plt.subplots(3, 2)
-
 
 axes[0,0].set_title('Original Signal')
 axes[0,0].plot(unscaled_bursts_samples[0,0,0,0,0])
