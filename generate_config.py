@@ -1,4 +1,13 @@
-rng = 2026
+import numpy as np
+import os
+
+simulation_condition = "testing_config"
+
+
+
+
+
+seed = 2026
 
 n_samples = 3 # amount of samples
 
@@ -53,6 +62,12 @@ fs_range = [250]
 snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
 
 
+num_models = 5 #default: 10
+num_epochs = 3000#default: 3000
+
+lr = 0.01
+
+num_emb = 21
 
 
 
@@ -60,5 +75,32 @@ snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10] #signal to noise ratios
 
 
 
+### generating file paths
+file_name = f"{simulation_condition}_config.npz"
+config_dir = os.path.join("..", "data", "configs")
+file_path = os.path.join(config_dir, file_name)
 
+os.makedirs(config_dir, exist_ok = True)
+
+
+global_parameters = dict(seed=seed, n_samples=n_samples, n_seconds=n_seconds, burst_amp_sigma=burst_amp_sigma,
+                        beta=beta, burst_cycles=burst_cycles, noise_duration=noise_duration, randomize_amps=randomize_amps)
+
+
+
+fitting_parameters = dict(num_models=num_models, num_epochs=num_epochs, lr=lr, num_emb=num_emb)
+
+
+np.savez_compressed(file_path,
+                    global_parameters=global_parameters,
+                    generation_type=generation_type,
+                    phase_shift_degree=phase_shift_degree,
+                    delays=delays,
+                    freq_ranges=freq_ranges,
+                    fs_range=fs_range,
+                    snrs=snrs,
+                    fitting_parameters=fitting_parameters
+
+)
+print(f"config file saved as {file_path}")
 

@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 from nds_toolbox.sim.bursts.simulator import (simulate_bursty_signal, 
                                              simulate_empty_signal, 
                                              simulate_noise, 
@@ -10,11 +11,21 @@ from nds_toolbox.sim.bursts.filters import (delay_bursts, phase_shift)
 import matplotlib.pyplot as plt
 import math
 
+
+config_file = None
+# load config file if path was given as arg
+try:
+    config_path = sys.argv[1]
+    config_file = np.load(config_path, allow_pickle=True)
+except IndexError:
+    print("No config path was given, using config defined in code")
+
+
+
+
 ###################
 #### SETTINGS #####
 ###################
-
-use_config_file = False  #if true settings will be ignored and config will be loaded
 
 simulation_condition = "t1"
 
@@ -80,7 +91,35 @@ fs_range = [250]
 
 # Signal to noise ratios
 snrs = [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10]
-###################################################################
+###############################
+
+#overwrite config if file was given
+
+if config_file is not None:
+
+    #split path in 2 with head and tail, taking tail (file name only), remove last 11 chars (_config.npz)
+    simulation_condition = os.path.split(config_path)[1][:-11]
+
+    global_params = config_file["global_parameters"].item()
+    seed = global_params["seed"]
+    n_samples = global_params["n_samples"]
+    n_seconds = global_params["n_seconds"]
+    burst_amp_sigma = global_params["burst_amp_sigma"]
+    beta = global_params["beta"]
+    burst_cycles = global_params["burst_cycles"]
+    noise_duration = global_params["noise_duration"]
+    randomize_amps = global_params["randomize_amps"]
+
+    generation_type = config_file["generation_type"]
+    phase_shift_degree = config_file["phase_shift_degree"]
+    delays = config_file["delays"]
+    freq_ranges = config_file["freq_ranges"]
+    fs_range = config_file["fs_range"]
+    snrs = config_file["snrs"]
+
+#############################
+
+
 
 
 
