@@ -332,6 +332,7 @@ def truncate(
     edge_states_cv=0.1,
     verbose=False,
     return_info=False,
+    num_channels=1
 ):
     """
     Truncate mixture components in two stages:
@@ -403,6 +404,7 @@ def truncate(
     # ----------------------------
     # (2) Optional edge-state removal
     # ----------------------------
+
     final_idx = active_idx
     removed_edge_idx = jnp.array([], dtype=active_idx.dtype)
     kept_cv = None
@@ -410,25 +412,71 @@ def truncate(
     cv_diags = None
 
     if remove_edge_states and active_idx.shape[0] > 0:
-        trunc_covs_stage1 = covs[active_idx]  # (k0, D, D)
-        diag = jnp.diagonal(trunc_covs_stage1, axis1=-2, axis2=-1)  # (k0, D)
+        if num_channels == 1:
+            trunc_covs_stage1 = covs[active_idx]  # (k0, D, D)
+            diag = jnp.diagonal(trunc_covs_stage1, axis1=-2, axis2=-1)  # (k0, D)
 
-        mu = jnp.mean(diag, axis=-1)
-        sd = jnp.std(diag, axis=-1)
-        cv_diags = sd / (mu + 1e-12)
+            mu = jnp.mean(diag, axis=-1)
+            sd = jnp.std(diag, axis=-1)
+            cv_diags = sd / (mu + 1e-12)
 
-        keep_mask = cv_diags <= edge_states_cv
-        removed_edge_idx = active_idx[~keep_mask]   # original component indices
+            keep_mask = cv_diags <= edge_states_cv
+            removed_edge_idx = active_idx[~keep_mask]   # original component indices
 
-        # keep at least one state
-        if not bool(jnp.any(keep_mask)):
-            best_idx_within_active = jnp.argmin(cv_diags)
-            keep_mask = jnp.zeros_like(keep_mask, dtype=bool).at[best_idx_within_active].set(True)
-            removed_edge_idx = active_idx[~keep_mask]
+            # keep at least one state
+            if not bool(jnp.any(keep_mask)):
+                best_idx_within_active = jnp.argmin(cv_diags)
+                keep_mask = jnp.zeros_like(keep_mask, dtype=bool).at[best_idx_within_active].set(True)
+                removed_edge_idx = active_idx[~keep_mask]
+            
+            final_idx = active_idx[keep_mask]
+            kept_cv = cv_diags[keep_mask]
+            removed_cv = cv_diags[~keep_mask]
 
-        final_idx = active_idx[keep_mask]
-        kept_cv = cv_diags[keep_mask]
-        removed_cv = cv_diags[~keep_mask]
+        elif num_channels == 2:
+            trunc_covs_stage1 = covs[active_idx]  # (k0, D, D)
+
+            dim = trunc_covs_stage1.shape[1] // 2
+
+            cov_channel_1 = trunc_covs_stage1[:, 0:dim, 0:dim]
+            cov_channel_2 = trunc_covs_stage1[:, dim:(dim*2), dim:(dim*2)]
+
+            diag_channel_1 = jnp.diagonal(cov_channel_1, axis1=-2, axis2=-1)
+            mu_1 = jnp.mean(diag_channel_1, axis=-1)
+            sd_1 = jnp.std(diag_channel_1, axis=-1)
+            cv_diags_1 = sd_1 / (mu_1 + 1e-12)
+
+            diag_channel_2 = jnp.diagonal(cov_channel_2, axis1=-2, axis2=-1)
+            mu_2 = jnp.mean(diag_channel_2, axis=-1)
+            sd_2 = jnp.std(diag_channel_2, axis=-1)
+            cv_diags_2 = sd_2 / (mu_2 + 1e-12)
+
+
+            cv_diags = (cv_diags_1 + cv_diags_2) / 2
+
+            keep_mask = cv_diags <= edge_states_cv
+            removed_edge_idx = active_idx[~keep_mask]   # original component indices
+
+            # keep at least one state
+            if not bool(jnp.any(keep_mask)):
+                best_idx_within_active = jnp.argmin(cv_diags)
+                keep_mask = jnp.zeros_like(keep_mask, dtype=bool).at[best_idx_within_active].set(True)
+                removed_edge_idx = active_idx[~keep_mask]
+            
+            final_idx = active_idx[keep_mask]
+            kept_cv = cv_diags[keep_mask]
+            removed_cv = cv_diags[~keep_mask]
+
+
+            
+        else:
+            print("for edge-state removal num_channels has to be 1 or 2, skipping")
+
+
+
+
+
+
 
     # ----------------------------
     # (3) Final truncated params

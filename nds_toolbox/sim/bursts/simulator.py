@@ -13,7 +13,7 @@ from scipy.signal import sawtooth
 from scipy.signal.windows import tukey
 from neurodsp.filt import filter_signal
 from math import ceil 
-import matplotlib.pyplot as plt
+
 
 
 
@@ -33,9 +33,6 @@ def _get_duration(duration_param, rng):
         raise ValueError("Duration parameter must be a scalar or a two-element list/tuple/array.")
 
 
-import numpy as np
-
-import numpy as np
 
 def make_transition_matrix(num_states, state_transition, trans_mat=None):
     if num_states < 2:
@@ -440,10 +437,7 @@ def simulate_noise(time_vec, fs, beta=1, rng=None):
 
 def shift_right_overwrite(arr, s, n, x):
     """
-    Shift n elements of list `arr` starting at index s to the right by x positions in-place.
-    Overwrites destination positions. Vacated positions inside the affected window are filled with 0.
-    If x <= 0 or n <= 0 does nothing. If x >= n, the n positions starting at s become 0.
-    Indices are 0-based. Values that move past the end of arr are dropped.
+    Shift n elements of list `arr` starting at index s to the right by x positions.
     """
     length = len(arr)
     s = int(s)
@@ -500,7 +494,8 @@ def simulate_independent_signal(
         rng=None
         ):
     """
-    Simulate a bursty signal with added noise.
+    Simulate a bursty signal with independent onsets where no onset of the newly
+    generated signal overlaps with any signal given as previous states.
 
     """
 
@@ -530,7 +525,7 @@ def simulate_independent_signal(
         overlap_found = False
         made_change = True
         s1_end_found = False
-        s2_end_found = False        #print("RUN " + str(run))
+        s2_end_found = False 
         run += 1
         if(run > 100): break
         made_change = False
@@ -538,10 +533,9 @@ def simulate_independent_signal(
             if made_change: break
             for index, (s1, s2) in enumerate(zip(p, states)):
                 if made_change: break
-                ##### OVERLAP FOUND
+                #OVERLAP FOUND
                 if overlap_found:
                     if (s1 == 0) and (s2 != 0) and (not s1_end_found):
-                        #print(s1_end_found)
                         s1_end = index
                         s1_end_found = True
                     elif (s1 != 0) and (s2 == 0) and (not s2_end_found):
@@ -561,19 +555,12 @@ def simulate_independent_signal(
                         s1_end_found = False
                         s2_end_found = False
 
-                        #print(s1_end)
-                        #print(s2_end)
                         shift_right_overwrite(states, overlap_start, s2_end-overlap_start, s1_end-overlap_start)
                         shift_right_overwrite(bursts, overlap_start, s2_end-overlap_start, s1_end-overlap_start)
-                        
-
-                        #rint("did a shiftrrrr" + str(performed_shifts))
-                        #performed_shifts += 1
+                
                 else:
-                    #print("GOING")
                     if (s2 != 0) and (s1 != 0):
                         overlap_start = index
-                        #print(f"START: {overlap_start}")
                         overlap_found = True
 
                         
@@ -594,47 +581,13 @@ def simulate_independent_signal(
             "noise": noise,}
 
 
-def phase_shift(signal_dict, degree, snr_db, fs, freq, use_filter=True, highpass_f=0.5):
-    states = signal_dict["states"]
-    bursts = signal_dict["unscaled_bursts"]
-    noise = signal_dict["noise"]
-
-
-    onset_start = 0
-    onset_found = False
-    for index, state in enumerate(states):
-        if state != 0:
-            if not onset_found:
-                onset_start = index
-                onset_found = True
-        else:
-            if onset_found:
-                burst = np.copy(bursts[onset_start:index-1])
-                roll_value = (degree % 360) * 1 // (360 // (fs / freq[state-1]))
-                burst = np.roll(burst, roll_value)
-                 
-
-                bursts[onset_start:index-1] = np.copy(burst)
-                print("phase shifted signal by " + str(roll_value))
-
-                onset_found = False
-    
-
-
-    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
-
-
-    return {"signal": signal,
-            "states": states,
-            "bursts": scaled_bursts,
-            "unscaled_bursts": bursts,
-            "noise": noise,}
-
-
-
-
 
 def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, time_vec, beta=1, scale_amps=True, use_filter=True, highpass_f=0.5, chi=0.15, burst_amp_sigma=0.1, power_law_scale=True):
+    """
+    Copies existing onset times but changes the frequency of the bursts depending on the given frequency range.
+    Randomizes the amplitude by splitting the burst into 3 parts and scaling it according to the amplitude.
+    """
+    
     states = np.copy(signal_dict["states"])
     bursts = np.copy(signal_dict["unscaled_bursts"])
     noise = np.copy(signal_dict["noise"])
@@ -692,6 +645,10 @@ def copy_signal_change_burst_freq(signal_dict, snr_db, fs, freq, rng, time_vec, 
 
 
 def copy_signal_change_noise(signal_dict, snr_db, fs, rng, time_vec, use_filter=True, highpass_f=0.5, beta=1):
+    """
+    Copies existing onset times but changes the noise to a newly generated noise.
+    """
+
     states = np.copy(signal_dict["states"])
     bursts = np.copy(signal_dict["unscaled_bursts"])
 
@@ -706,25 +663,7 @@ def copy_signal_change_noise(signal_dict, snr_db, fs, rng, time_vec, use_filter=
             "noise": noise,}
 
 
-def delay_bursts(signal_dict, snr_db, delay, fs, use_filter=True, highpass_f=0.5):
-    
-    states = np.copy(signal_dict["states"])
-    bursts = np.copy(signal_dict["unscaled_bursts"])
-    noise = np.copy(signal_dict["noise"])
-    
-    offset = ceil(delay * (fs / 1000))
 
-    states = np.roll(states, offset)
-    bursts = np.roll(bursts, offset)
-    
-    print(f"shifted by {offset}")
-    signal, scaled_bursts = _add_noise(bursts, states, noise, snr_db, use_filter = use_filter, fs = fs, highpass_f = highpass_f)
-
-    return {"signal": signal,
-            "states": states,
-            "bursts": scaled_bursts,
-            "unscaled_bursts": bursts,
-            "noise": noise,}
 
 
 
