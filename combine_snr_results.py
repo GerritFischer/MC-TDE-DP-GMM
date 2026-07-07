@@ -16,9 +16,6 @@ They will be combined into a single dataset and result file in the format of:
 This script was created to fit the models for larger datasets on different computers.
 """
 
-
-
-
 con1 = "rnd-5-(10-40)-snr(-10-0)"
 con2 = "rnd-5-(10-40)-snr(2-10)"
 con_fin = "rnd-5-(10-40)-snr(-10-10)"

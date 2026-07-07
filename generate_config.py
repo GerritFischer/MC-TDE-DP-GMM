@@ -1,13 +1,27 @@
 import numpy as np
 import os
 
+"""
+This file is used to generate config files for the signal generation and model fitting process.
+The configuration file will be saved in the results folder.
+To use a config run the simulation program or fitting program with an additonal argument.
+Otherwise the internal config (set variables will be used)
+
+python fit_models.py /path/to/config/file
+"""
+
+##############################
+###### General settings ######
+##############################
+
 simulation_condition = "emb_test_fs250_same_onset_2"
 
-
-
-
-
 seed = 2020
+
+
+#########################################
+###### Signal generation settings #######
+#########################################
 
 n_samples = 3 # amount of samples
 
@@ -62,19 +76,20 @@ fs_range = [250]
 snrs = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]  #signal to noise ratios
 
 
+
+
+############################
+###### Model settings ######
+############################
+
 num_models = 5 #default: 10
-num_epochs = 3000#default: 3000
+num_epochs = 3000 #default: 3000
 
 lr = 0.01
 
 num_emb = 21
 
-
-
-
-
-
-
+#####################################################################################
 ### generating file paths
 file_name = f"{simulation_condition}_config.npz"
 config_dir = os.path.join("..", "data", "configs")

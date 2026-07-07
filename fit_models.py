@@ -87,17 +87,24 @@ for s_id, sample in enumerate(signal_sample):
                 if use_different_emb:
                     num_emb = num_embs[snr_id]
 
-                main_sig = snr[0]
+                #save and compute base signal and tde
+                main_sig = snr[0] 
                 main_states = states_sample[s_id, cond1_id, cond2_id, snr_id, 0]
                 
-                main_sig = (main_sig - np.mean(main_sig))/ np.std(main_sig)
+                # check if empty signal was used
+                if np.mean(main_sig) != 0:
+                    main_sig = (main_sig - np.mean(main_sig))/ np.std(main_sig)
+                
+                    
                 tde_signal = compute_tde(main_sig, num_emb)
 
                 trimmed_main_sig = trim_data(main_sig, num_emb, verbose=False)
 
+                #extract remaining signals, compute TDE and fit models with them
                 comp_sig = snr[1:]
-                for sig_id, sig in enumerate(comp_sig):                    
-                    sig = (sig - np.mean(sig))/ np.std(sig)
+                for sig_id, sig in enumerate(comp_sig):    
+                    if np.mean(sig) != 0:
+                        sig = (sig - np.mean(sig))/ np.std(sig)
                     states = states_sample[s_id, cond1_id, cond2_id, snr_id, sig_id+1]
                     trimmed_sig = trim_data(sig, num_emb, verbose=False)
                     tde_signal2 = compute_tde(sig, num_emb)                   
@@ -118,7 +125,9 @@ for s_id, sample in enumerate(signal_sample):
                                             verbose=True)
                     
                     current_run += 1
+                    #save results beginning at index 0 (base signal 0 and first signal 1 -> saved in 0, base 0 and second sig 2 -> 1)
                     results[s_id, cond1_id, cond2_id, snr_id, sig_id] = dict(dpgmm_result)
+
 
 os.makedirs(result_dir, exist_ok = True)                    
 result_path = os.path.join(result_dir, f"{simulation_condition}_results.npz")
